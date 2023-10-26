@@ -18,12 +18,14 @@ def env(**kwargs):
     return env
 
 
+parallel_env = parallel_wrapper_fn(env)
+
 class raw_env(AECEnv, EzPickle):
     metadata = {
         "render_modes": ["human", "rgb_array"],
         "name": "custom_env",
         "is_parallelizable": True,
-        "render_fps": 5,
+        "render_fps": 10,
         "has_manual_policy": True,
     }
 
@@ -90,7 +92,6 @@ class raw_env(AECEnv, EzPickle):
 
         if self.render_mode == "human":
             self.render()
-            time.sleep(0.1)
 
     def observe(self, agent):
         o = self.env.safely_observe(self.agent_name_mapping[agent])

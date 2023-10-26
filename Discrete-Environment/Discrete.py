@@ -11,7 +11,8 @@ from gymnasium.spaces import Discrete, MultiDiscrete
 
 from pettingzoo.utils.env import ParallelEnv, AECEnv
 
-from pettingzoo.sisl.pursuit.utils import agent_utils
+#from pettingzoo.sisl.pursuit.utils import agent_utils
+import AgentUtils
 from pettingzoo.sisl.pursuit.utils.agent_layer import AgentLayer
 from pettingzoo.sisl.pursuit.utils.controllers import (
     PursuitPolicy,
@@ -41,8 +42,10 @@ class Discrete:
         
         self.obs_offset = int((self.obs_range - 1) / 2)
         
-        self.agents = agent_utils.create_agents(
-            self.n_agents, self.map_matrix, self.obs_range, self.np_random
+        self.availableCols = [(255,0,0), (0,255,0), (0,0,255),(255,255,0), (0,255,255), (255,0,255),(128,0,0), (0,128,0), (0,0,128), (128,128,0)]
+        
+        self.agents = AgentUtils.create_agents(
+            self.n_agents, self.map_matrix, self.obs_range, self.np_random, self.availableCols
         )
         
         self.agent_layer = AgentLayer(self.x_size, self.y_size, self.agents)
@@ -65,9 +68,9 @@ class Discrete:
         
         self.current_agent_layer = np.zeros((self.x_size, self.y_size), dtype=np.int32)
         
-        self.agent_controller = (
-                RandomPolicy(n_act_agent, self.np_random)
-            )
+        #self.agent_controller = (
+        #        RandomPolicy(n_act_agent, self.np_random)
+         #   )
 
         self.observation_space = [obs_space for _ in range(self.n_agents)]
         self.act_dims = [n_act_agent for i in range(self.n_agents)]
@@ -75,6 +78,10 @@ class Discrete:
         self.model_state = np.zeros((4,) + self.map_matrix.shape, dtype=np.float32)
         self.pixel_scale = 30
         self.constraint_window = 1.0
+        self.spawnStep = 0
+        self.moveWallsStep = 0
+        
+        self.walls = []
         
     def close(self):
         pygame.event.pump()
@@ -92,7 +99,7 @@ class Discrete:
         )
         constraints = [[xlb, xub], [ylb, yub]]
         
-        self.agents = agent_utils.create_agents(
+        self.agents = AgentUtils.create_agents(
             self.n_agents,
             self.map_matrix,
             self.obs_range,
@@ -106,14 +113,34 @@ class Discrete:
         self.latest_obs = [None for _ in range(self.n_agents)]
         
         self.agent_layer = AgentLayer(self.x_size, self.y_size, self.agents)
-
+        self.spawnStep = 0
+        self.moveWallsStep = 0
         
         self.model_state[0] = self.map_matrix
         self.model_state[1] = self.agent_layer.get_state_matrix()
 
+        self.walls = []
         self.frames = 0
+        print("Reset")
 
         return self.safely_observe(0)
+    
+    def draw_agent_observations(self):
+        for i in range(self.agent_layer.n_agents()):
+            x, y = self.agent_layer.get_position(i)
+            patch = pygame.Surface(
+                (self.pixel_scale * self.obs_range, self.pixel_scale * self.obs_range)
+            )
+            patch.set_alpha(128)
+            patch.fill((255, 152, 72))
+            ofst = self.obs_range / 2.0
+            self.screen.blit(
+                patch,
+                (
+                    self.pixel_scale * (x - ofst + 1 / 2),
+                    self.pixel_scale * (y - ofst + 1 / 2),
+                ),
+            )
     
     def _seed(self, seed=0):
         self.np_random, seed_ = seeding.np_random(seed)
@@ -126,9 +153,49 @@ class Discrete:
         agent_layer.move_agent(agent_id, action)
         self.model_state[1] = self.agent_layer.get_state_matrix()
         
+        self.moveWallsStep += 1
+        if(self.moveWallsStep > 3):
+            self.moveWallsStep = 0
+            self.moveWalls()
         self.model_state[0] = self.map_matrix
-        
+        #print(self.spawnStep)
+        if(self.spawnStep > 60):
+            self.spawnStep = 0
+            self.spawnWall()
+            
+        self.checkWalls()
+        self.spawnStep += 1
         self.render()
+    
+    def moveWalls(self):
+        for i in range(len(self.walls)):
+            (x, col) = self.walls[i]
+            self.walls[i] = (x - 1, col)
+            #print(x + 1)      
+
+    def checkWalls(self):
+        if len(self.walls) < 1:
+            return
+
+        (wallX, wallCol) = self.walls[0]
+        for i in range(self.agent_layer.n_agents()):
+            agentX, agentY = self.agent_layer.get_position(i)
+            agentCol = self.agent_layer.allies[i].get_color()
+            if agentX > wallX and wallCol == agentCol:
+                print("RightColorWall")
+                self.walls.remove((wallX, wallCol))
+                break
+            elif agentX > wallX:
+                print("WrongColorWall")
+                self.reset()
+                break
+                
+                
+    
+    def spawnWall(self):
+        x_len, y_len = self.model_state[0].shape
+        col = random.choice(self.availableCols)
+        self.walls.append((x_len, col))   
     
     def reward(self):
         
@@ -157,9 +224,23 @@ class Discrete:
                 int(self.pixel_scale * x + self.pixel_scale / 2),
                 int(self.pixel_scale * y + self.pixel_scale / 2),
             )
-            col = (255, 0, 0)
+            col = self.agent_layer.allies[i].get_color()
             pygame.draw.circle(self.screen, col, center, int(self.pixel_scale / 3))
-
+    
+    def draw_wall(self):
+        for i in range(len(self.walls)):      
+            x_len, y_len = self.model_state[0].shape
+            (x,col) = self.walls[i]
+            center1 = (
+                    int(self.pixel_scale * x + self.pixel_scale / 2),
+                    int(self.pixel_scale * 0),
+                )
+            center2 = (
+                    int(self.pixel_scale * x + self.pixel_scale / 2),
+                    int(self.pixel_scale * y_len),
+                )
+            pygame.draw.line(self.screen, col, center1, center2, int(self.pixel_scale / 2) )
+        
     def render(self):
         
         if self.render_mode == "human":
@@ -175,7 +256,8 @@ class Discrete:
         
         #self.draw_model_state()
         self.draw_agents()
-        
+        self.draw_agent_observations()
+        self.draw_wall()
         
         observation = pygame.surfarray.pixels3d(self.screen)
         new_observation = np.copy(observation)
