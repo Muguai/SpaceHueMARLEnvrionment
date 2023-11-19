@@ -42,6 +42,8 @@ def create_agents(
         agent = DiscreteAgent(
             xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[i]
         )
+        if(xinit != 0):
+            xinit = xinit / 2;
         agent.set_position(xinit, yinit)
         agents.append(agent)
     return agents

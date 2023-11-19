@@ -13,7 +13,7 @@ from ray.rllib.algorithms.ppo import PPO
 from ray.rllib.env.wrappers.pettingzoo_env import PettingZooEnv
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-from rllib_pistonball import CNNModelV2
+from Algo.rllib_pistonball import CNNModelV2
 
 from pettingzoo.butterfly import pistonball_v6
 
