@@ -27,6 +27,9 @@ class DiscreteAgent(Agent):
         self.color = col
 
         self.random_state = randomizer
+        
+        self.disable_movement = False
+        self.disable_movement_steps = 0
 
         self.xs = xs
         self.ys = ys
@@ -72,6 +75,11 @@ class DiscreteAgent(Agent):
         # if dead or reached goal dont move
         if self.terminal:
             return cpos
+        if self.disable_movement_steps > 0:
+            self.disable_movement_steps -= 1
+            return cpos
+        elif self.disable_movement == True:
+            self.disable_movement = False
         # if in building, dead, and stay there
         if self.inbuilding(cpos[0], cpos[1]):
             self.terminal = True
@@ -121,6 +129,12 @@ class DiscreteAgent(Agent):
     def set_position(self, xs, ys):
         self.current_pos[0] = xs
         self.current_pos[1] = ys
+    
+    def set_disable_movement(self, bool):
+        self.disable_movement = bool
+        
+    def set_disable_movement_steps(self, steps):
+        self.disable_movement_steps = steps
 
     def current_position(self):
         return self.current_pos

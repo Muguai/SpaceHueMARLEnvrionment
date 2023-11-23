@@ -15,7 +15,6 @@ def create_agents(
     flatten=False,
     randinit=False,
     constraints=None,
-    availableCols=[(255,0,0), (0,255,0), (0,0,255),(255,255,0), (0,255,255), (255,0,255),(128,0,0), (0,128,0), (0,0,128), (128,128,0)],
 ):
     """Initializes the agents on a map (map_matrix).
     -nagents: the number of agents to put on the map
@@ -25,6 +24,18 @@ def create_agents(
     """
     #availableCols = [(255,0,0), (0,255,0), (0,0,255),(255,255,0), (0,255,255), (255,0,255),(128,0,0), (0,128,0), (0,0,128), (128,128,0)]
     xs, ys = map_matrix.shape
+    availableCols = [
+            (255, 0, 0),   # Red
+            (0, 255, 0),   # Green
+            (255, 255, 0), # Yellow
+            (0, 128, 255), # Light Blue
+            (255, 0, 255), # Magenta
+            (255, 128, 0), # Orange
+            (128, 255, 0), # Lime
+            (128, 0, 128),  # Purple
+            (0, 0, 255),   # Blue
+            (0, 255, 255), # Cyan
+        ]       
     agents = []
     expanded_mat = np.zeros((xs + 2, ys + 2))
     for i in range(nagents):

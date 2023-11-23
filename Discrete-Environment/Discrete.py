@@ -41,17 +41,32 @@ class Discrete:
         self._seed()
         
         self.screen = None;
-        self.n_agents = 6
-        
+        self.n_agents = 4
         self.obs_range = 7
         
         self.obs_offset = int((self.obs_range - 1) / 2)
         
-        self.availableCols = [(255,0,0), (0,255,0), (0,0,255),(255,255,0), (0,255,255), (255,0,255),(128,0,0), (0,128,0), (0,0,128), (128,128,0)]
+        self.fullyObservable = False
         
+        
+        self.availableCols = [
+            (255, 0, 0),   # Red
+            (0, 255, 0),   # Green
+            (255, 255, 0), # Yellow
+            (0, 128, 255), # Light Blue
+            (255, 0, 255), # Magenta
+            (255, 128, 0), # Orange
+            (128, 255, 0), # Lime
+            (128, 0, 128),  # Purple
+            (0, 0, 255),   # Blue
+            (0, 255, 255), # Cyan
+        ]       
         self.agents = AgentUtils.create_agents(
-            self.n_agents, self.map_matrix, self.obs_range, self.np_random, self.availableCols
+            self.n_agents, self.map_matrix, self.obs_range, self.np_random
         )
+        
+        self.availableCols = self.availableCols[:self.n_agents]
+        
         
         self.agent_layer = AgentLayer(self.x_size, self.y_size, self.agents)
         
@@ -61,12 +76,20 @@ class Discrete:
         self.latest_reward_state = [0 for _ in range(self.n_agents)]
         self.latest_obs = [None for _ in range(self.n_agents)]
         max_agents_overlap = max(self.n_agents, self.n_agents)
-        obs_space = spaces.Box(
-            low=0,
-            high = max_agents_overlap,
-            shape=(self.obs_range, self.obs_range, 3),
-            dtype=np.float32,
-        )
+        if not self.fullyObservable:
+            obs_space = spaces.Box(
+                low=0,
+                high = max_agents_overlap,
+                shape=(self.obs_range, self.obs_range, 3),
+                dtype=np.float32,
+            )
+        else:
+            obs_space = spaces.Box(
+                low=0,
+                high = max_agents_overlap,
+                shape=(self.x_size, self.y_size, 3),
+                dtype=np.float32,
+            )
         
         act_space = spaces.Discrete(n_act_agent)
         self.action_space = [act_space for _ in range(self.n_agents)]
@@ -87,7 +110,7 @@ class Discrete:
         self.moveWallsStep = 0
         
         
-        self.wall_cooldown = 30
+        self.wall_cooldown = 15
         self.wall_cooldown_counter = 0
         self.walls = []
         
@@ -170,19 +193,19 @@ class Discrete:
         self.model_state[1] = self.agent_layer.get_state_matrix()
 
         self.moveWallsStep += 1
-        print("move step ", self.moveWallsStep)
+        self.checkAsteroidCollision()
 
         if self.moveWallsStep > 3:
-            print("move step")
             self.moveWallsStep = 0
             self.moveWalls()
             self.moveAsteroids()
         self.model_state[0] = self.map_matrix
         
         self.checkWalls()
+        self.checkAsteroidCollision()
 
 
-        if self.spawnStep % 5 == 0:
+        if self.spawnStep % 2 == 0:
             if self.wall_cooldown_counter <= 0:
 
                 if self.np_random.random() < 0.5:
@@ -205,11 +228,17 @@ class Discrete:
             #print(x + 1)
 
     def moveAsteroids(self):
-        for i in range(len(self.asteriods)):
-            asteroid = self.asteriods[i]
+        new_asteroids = []
+        for asteroid in self.asteriods:
             (x, y) = asteroid['position']
-            new_x, new_y = x - 1, y  # Update the position based on your desired logic
-            asteroid['position'] = (new_x, new_y)
+            new_x, new_y = x - 1, y 
+
+            # Check if the new x-coordinate is within the environment
+            if 0 <= new_x < self.x_size:
+                asteroid['position'] = (new_x, new_y)
+                new_asteroids.append(asteroid)
+
+        self.asteriods = new_asteroids
         
     def checkWalls(self):
         if len(self.walls) < 1:
@@ -227,13 +256,38 @@ class Discrete:
                 print("WrongColorWall")
                 self.reset()
                 break
+            
+    def checkAsteroidCollision(self):
+        asteroids_to_remove = []
+
+        for i in range(self.agent_layer.n_agents()):
+            agentX, agentY = self.agent_layer.get_position(i)
+
+            for asteroid in self.asteriods:
+                (asteroidX, asteroidY) = asteroid['position']
+
+                if agentX == asteroidX and agentY == asteroidY:
+                    print("Asteroid hit an agent!")
+                    # Add your logic to handle the collision, e.g., prevent agent movement for N steps
+                    self.disableAgentMovement(i, 5)
+                    asteroids_to_remove.append(asteroid)
+
+        # Remove asteroids that collided with agents
+        for asteroid in asteroids_to_remove:
+            self.asteriods.remove(asteroid)
+
+    def disableAgentMovement(self, agent_id, steps):
+        # Add logic to disable agent movement for N steps
+        # For example, you can set a flag in the agent's instance to indicate that it should not move
+        self.agent_layer.allies[agent_id].set_disable_movement(True)
+        self.agent_layer.allies[agent_id].set_disable_movement_steps(steps)
                 
                 
     
     def spawnWall(self):
         x_len, y_len = self.model_state[0].shape
         col = random.choice(self.availableCols)
-        self.walls.append((x_len, col))  
+        self.walls.append((x_len - 1, col))  
         
     
     def spawnAsteroid(self, y):
@@ -242,8 +296,9 @@ class Discrete:
         asteroid_sprite = pygame.transform.scale(
             asteroid_sprite, (int(self.pixel_scale), int(self.pixel_scale))
         )
+        x = x_len - 1
         self.asteriods.append({
-            'position': (x_len, y),
+            'position': (x, y),
             'sprite': asteroid_sprite
         }) 
     
@@ -261,7 +316,7 @@ class Discrete:
 
             y = random.choice(list(available_y_positions))
             self.spawnAsteroid(y)
-            new_asteroids.append((self.x_size, y))
+            new_asteroids.append((self.x_size - 1, y))
 
 
     
@@ -360,12 +415,29 @@ class Discrete:
     def draw_asteroids(self):
         for asteroid in self.asteriods:
             (x, y) = asteroid['position']
-            center = (
-                int(self.pixel_scale * x + self.pixel_scale / 2),
-                int(self.pixel_scale * y + self.pixel_scale / 2),
-            )
             asteroid_sprite = asteroid['sprite']
+
+            # Calculate the position so that the center of the sprite is at (x, y)
+            center = (
+                int(self.pixel_scale * x + self.pixel_scale / 2 - asteroid_sprite.get_width() / 2),
+                int(self.pixel_scale * y + self.pixel_scale / 2 - asteroid_sprite.get_height() / 2),
+            )
+
             self.screen.blit(asteroid_sprite, center)
+    
+    def draw_grid(self):
+        for x in range(self.x_size + 1):
+            pygame.draw.line(
+                self.screen, (255, 255, 255),
+                (x * self.pixel_scale, 0),
+                (x * self.pixel_scale, self.y_size * self.pixel_scale)
+            )
+        for y in range(self.y_size + 1):
+            pygame.draw.line(
+                self.screen, (255, 255, 255),
+                (0, y * self.pixel_scale),
+                (self.x_size * self.pixel_scale, y * self.pixel_scale)
+            )
         
     def render(self):
         
@@ -387,6 +459,7 @@ class Discrete:
         self.draw_agent_observations()
         self.draw_wall()
         self.draw_asteroids();
+        #self.draw_grid();
         
         observation = pygame.surfarray.pixels3d(self.screen)
         new_observation = np.copy(observation)
@@ -409,6 +482,8 @@ class Discrete:
     def safely_observe(self, i):
         agent_layer = self.agent_layer
         obs = self.collect_obs(agent_layer, i)
+        #print("Observe")
+        #print(obs)
         return obs
     
     def collect_obs(self, agent_layer, i):
@@ -419,13 +494,42 @@ class Discrete:
         
     def collect_obs_by_idx(self, agent_layer, agent_idx):
         # returns a flattened array of all the observations
-        obs = np.zeros((3, self.obs_range, self.obs_range), dtype=np.float32)
+        if(self.fullyObservable):
+            obs = np.zeros((3, self.x_size, self.y_size), dtype=np.float32)
+        else:
+            obs = np.zeros((3, self.obs_range, self.obs_range), dtype=np.float32)
         obs[0].fill(1.0)  # border walls set to -0.1?
         xp, yp = agent_layer.get_position(agent_idx)
+        if not self.fullyObservable:
+            xlo, xhi, ylo, yhi, xolo, xohi, yolo, yohi = self.obs_clip(xp, yp)
+       
+        if(self.fullyObservable):
+            obs[0:2, :, :] = np.abs(self.model_state[0:2, :, :])
+        else:
+            obs[0:2, xolo:xohi, yolo:yohi] = np.abs(self.model_state[0:2, xlo:xhi, ylo:yhi])
+            
 
-        xlo, xhi, ylo, yhi, xolo, xohi, yolo, yohi = self.obs_clip(xp, yp)
-
-        obs[0:3, xolo:xohi, yolo:yohi] = np.abs(self.model_state[0:3, xlo:xhi, ylo:yhi])
+        # Identify walls in the observation matrix and set their values to 3 in the third channel
+        for (wall_x, wall_col) in self.walls:
+            agentCol = agent_layer.allies[agent_idx].get_color()
+            signifier = 1
+            if(wall_col == agentCol):
+                signifier = 2
+                
+            if(self.fullyObservable):
+                obs[2, wall_x, :] = signifier
+            elif xlo <= wall_x < xhi:
+                obs[2, wall_x - xlo, :] = signifier
+            
+        for asteroid in self.asteriods:
+            (asteroid_x, asteroid_y) = asteroid['position']
+            if(self.fullyObservable):
+                    obs[2, asteroid_x , asteroid_y ] = 3
+            elif xlo <= asteroid_x < xhi and ylo <= asteroid_y < yhi:
+                    obs[2, asteroid_x - xlo, asteroid_y - ylo] = 3
+            
+        
+    
         return obs
     
     def obs_clip(self, x, y):
