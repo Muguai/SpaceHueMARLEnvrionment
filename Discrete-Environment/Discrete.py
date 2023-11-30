@@ -62,7 +62,7 @@ class Discrete:
             (0, 255, 255), # Cyan
         ]       
         self.agents = AgentUtils.create_agents(
-            self.n_agents, self.map_matrix, self.obs_range, self.np_random
+            self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit=False
         )
         
         self.availableCols = self.availableCols[:self.n_agents]
@@ -139,7 +139,7 @@ class Discrete:
             self.map_matrix,
             self.obs_range,
             self.np_random,
-            randinit=True,
+            randinit=False,
             constraints=constraints,
         )
         
@@ -190,6 +190,8 @@ class Discrete:
     def step(self, action, agent_id, islast):
         agent_layer = self.agent_layer
         agent_layer.move_agent(agent_id, action)
+        
+
         self.model_state[1] = self.agent_layer.get_state_matrix()
 
         self.moveWallsStep += 1
@@ -201,6 +203,7 @@ class Discrete:
             self.moveAsteroids()
         self.model_state[0] = self.map_matrix
         
+        self.latest_reward_state = self.reward() / self.n_agents
         self.checkWalls()
         self.checkAsteroidCollision()
 
@@ -249,11 +252,9 @@ class Discrete:
             agentX, agentY = self.agent_layer.get_position(i)
             agentCol = self.agent_layer.allies[i].get_color()
             if agentX > wallX and wallCol == agentCol:
-                print("RightColorWall")
                 self.walls.remove((wallX, wallCol))
                 break
             elif agentX > wallX:
-                print("WrongColorWall")
                 self.reset()
                 break
             
@@ -321,8 +322,32 @@ class Discrete:
 
     
     def reward(self):
-        
-        return np.zeros(self.x_size, self.y_size)
+        rewards = np.zeros(self.n_agents)
+        for i in range(self.n_agents):
+            x, y = self.agent_layer.get_position(i)
+
+            for (wall_x, wall_col) in self.walls:
+                agent_col = self.agent_layer.allies[i].get_color()
+                if x > wall_x and wall_col == agent_col:
+                    print("HIT WALL")
+                    rewards[i] = 20 
+                    break
+                elif x > wall_x and wall_col != agent_col:
+                    print("HIT WALL")
+                    rewards[i] = -10 
+                    break
+
+            for asteroid in self.asteriods:
+                asteroid_x, asteroid_y = asteroid['position']
+                if x == asteroid_x and y == asteroid_y:
+                    print("HIT ASTEROID")
+                    rewards[i] = -1 
+                    break
+
+            if rewards[i] == 0:
+                rewards[i] = 0.01
+        #print(rewards)
+        return rewards
     
     def draw_model_state(self):
         # -1 is building pixel flag
@@ -456,7 +481,8 @@ class Discrete:
         self.screen.fill((0, 0, 0))
         #self.draw_model_state()
         self.draw_agents()
-        self.draw_agent_observations()
+        if not self.fullyObservable:
+            self.draw_agent_observations()
         self.draw_wall()
         self.draw_asteroids();
         #self.draw_grid();

@@ -84,19 +84,26 @@ class raw_env(AECEnv, EzPickle):
                 self.truncations[k] = True
         for k in self.agents:
             self.rewards[k] = self.env.latest_reward_state[self.agent_name_mapping[k]]
+        
+        #print("---- Rewards ----")
+        #print(self.rewards)
+            
         self.steps += 1
 
         self._cumulative_rewards[self.agent_selection] = 0
         self.agent_selection = self._agent_selector.next()
         self._accumulate_rewards()
+        
+        #print("---- Accumalate Rewards ----")
+        #print(self._cumulative_rewards)
 
         if self.render_mode == "human":
             self.render()
 
     def observe(self, agent):
         o = self.env.safely_observe(self.agent_name_mapping[agent])
-        print("Observe ", agent , " shape: ", o.shape)
-        print(o)
+        #print("Observe ", agent , " shape: ", o.shape)
+        #print(o)
         o = np.transpose(o, (1, 2, 0))        
         return o
 

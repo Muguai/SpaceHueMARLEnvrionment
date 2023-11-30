@@ -41,6 +41,7 @@ def create_agents(
     for i in range(nagents):
         xinit, yinit = (0, 0)
         if randinit:
+            print("rand")
             xinit, yinit = feasible_position_exp(
                 randomizer, map_matrix, expanded_mat, constraints=constraints
             )
@@ -50,6 +51,11 @@ def create_agents(
             expanded_mat[xinit, yinit + 1] = -1
             expanded_mat[xinit + 1, yinit + 2] = -1
             expanded_mat[xinit + 1, yinit] = -1
+        else:
+            print("not Rand", ys)
+            print(i + ((ys // 2) - (nagents // 2)))
+            yinit = i + ((ys // 2) - (nagents // 2))
+            
         agent = DiscreteAgent(
             xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[i]
         )
