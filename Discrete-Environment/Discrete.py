@@ -37,6 +37,7 @@ class Discrete:
         self.y_size = 16
         self.map_matrix = np.zeros((self.x_size, self.y_size), dtype=np.int32)
         self.max_cycles = 1000
+        self.randomSpawn = False
         
         self._seed()
         
@@ -60,7 +61,8 @@ class Discrete:
             (128, 0, 128),  # Purple
             (0, 0, 255),   # Blue
             (0, 255, 255), # Cyan
-        ]       
+        ] 
+        self.currentCol = 0      
         self.agents = AgentUtils.create_agents(
             self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit=False
         )
@@ -116,6 +118,10 @@ class Discrete:
         
         self.tinted_sprites = {}
         
+        self.spawn_functions = [self.spawnWall, self.spawnObstacles]
+        self.currentSpawnFunction = 0
+        self.currentObstacleSpawnY = 0
+        
     def close(self):
         pygame.event.pump()
         pygame.display.quit()
@@ -156,8 +162,11 @@ class Discrete:
 
         self.walls = []
         self.asteriods = []
+        self.fuels = []
         self.frames = 0
         self.wall_cooldown_counter = 0
+        self.currentCol = 0
+        self.currentObstacleSpawnY = 0
         print("Reset")
 
         return self.safely_observe(0)
@@ -200,7 +209,7 @@ class Discrete:
         if self.moveWallsStep > 3:
             self.moveWallsStep = 0
             self.moveWalls()
-            self.moveAsteroids()
+            self.moveObstacles()
         self.model_state[0] = self.map_matrix
         
         self.latest_reward_state = self.reward() / self.n_agents
@@ -210,11 +219,16 @@ class Discrete:
 
         if self.spawnStep % 2 == 0:
             if self.wall_cooldown_counter <= 0:
-
-                if self.np_random.random() < 0.5:
-                    self.spawnWall()
+                if not self.randomSpawn:
+                    self.spawn_functions[self.currentSpawnFunction]()
+                    self.currentSpawnFunction += 1
+                    if(self.currentSpawnFunction >= len(self.spawn_functions)):
+                        self.currentSpawnFunction = 0
                 else:
-                    self.spawnObstacles()
+                    if self.np_random.random() < 0.5:
+                        self.spawnWall()
+                    else:
+                        self.spawnObstacles() 
 
                 self.wall_cooldown_counter = self.wall_cooldown
             else:
@@ -230,18 +244,27 @@ class Discrete:
             self.walls[i] = (x - 1, col)
             #print(x + 1)
 
-    def moveAsteroids(self):
+    def moveObstacles(self):
         new_asteroids = []
         for asteroid in self.asteriods:
             (x, y) = asteroid['position']
             new_x, new_y = x - 1, y 
-
-            # Check if the new x-coordinate is within the environment
             if 0 <= new_x < self.x_size:
                 asteroid['position'] = (new_x, new_y)
                 new_asteroids.append(asteroid)
 
         self.asteriods = new_asteroids
+        
+        new_fuel = []
+        for fuel in self.fuels:
+            (x, y) = fuel['position']
+            new_x, new_y = x - 1, y 
+            if 0 <= new_x < self.x_size:
+                fuel['position'] = (new_x, new_y)
+                new_fuel.append(fuel)
+        self.fuels = fuel
+
+        
         
     def checkWalls(self):
         if len(self.walls) < 1:
@@ -287,7 +310,14 @@ class Discrete:
     
     def spawnWall(self):
         x_len, y_len = self.model_state[0].shape
-        col = random.choice(self.availableCols)
+        if(not self.randomSpawn):
+            col = self.availableCols[self.currentCol]
+            self.currentCol += 1
+            if(self.currentCol >= self.n_agents):
+                self.currentCol = 0
+            print("random", self.currentCol)
+        else:
+            col = random.choice(self.availableCols)
         self.walls.append((x_len - 1, col))  
         
     
@@ -302,6 +332,18 @@ class Discrete:
             'position': (x, y),
             'sprite': asteroid_sprite
         }) 
+        
+    def spawnFuel(self, y):
+        x_len, y_len = self.model_state[0].shape
+        fuel_sprite = pygame.image.load(f"art/Asteroid{random.randint(1, 3)}.png")
+        fuel_sprite = pygame.transform.scale(
+            fuel_sprite, (int(self.pixel_scale), int(self.pixel_scale))
+        )
+        x = x_len - 1
+        self.fuels.append({
+            'position': (x, y),
+            'sprite': fuel_sprite
+        })
     
     def spawnObstacles(self):
         numberOfSpawns = self.n_agents // 2
@@ -315,8 +357,22 @@ class Discrete:
             if not available_y_positions:
                 break
 
-            y = random.choice(list(available_y_positions))
-            self.spawnAsteroid(y)
+            if(not self.randomSpawn):
+                y = self.currentObstacleSpawnY
+                print("rarararara")
+                self.currentObstacleSpawnY += 1
+                if(self.currentObstacleSpawnY >= self.y_size):
+                    self.currentObstacleSpawnY = 0
+                if(self.currentSpawnFunction == 1):
+                    self.spawnAsteroid(y)
+                elif(self.currentSpawnFunction == 2):
+                    self.spawnFuel(y)
+            else:
+                y = random.choice(list(available_y_positions))
+                if self.np_random.random() < 0.7:
+                    self.spawnAsteroid(y)
+                else:
+                    self.spawnFuel(y)
             new_asteroids.append((self.x_size - 1, y))
 
 
