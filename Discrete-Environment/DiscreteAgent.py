@@ -20,7 +20,8 @@ class DiscreteAgent(Agent):
         n_channels=3,
         seed=1,
         flatten=False,
-        col=(0, 0, 0)
+        col=(0, 0, 0),
+        team_nr=0
     ):
         # map_matrix is the may of the environment (-1 are buildings)
         # n channels is the number of observation channels
@@ -39,8 +40,8 @@ class DiscreteAgent(Agent):
             1,  # move right
             2,  # move up
             3,  # move down
-            4,
-        ]  # stay
+            4, # stay
+        ]  
 
         self.motion_range = [[-1, 0], [1, 0], [0, 1], [0, -1], [0, 0]]
 
@@ -53,6 +54,11 @@ class DiscreteAgent(Agent):
         self.terminal = False
 
         self._obs_range = obs_range
+        
+        self.fullFuel = 150
+        self.currentFuel = self.fullFuel
+        
+        self.team_nr = team_nr
 
         if flatten:
             self._obs_shape = (n_channels * obs_range**2 + 1,)
@@ -73,7 +79,7 @@ class DiscreteAgent(Agent):
         cpos = self.current_pos
         lpos = self.last_pos
         # if dead or reached goal dont move
-        if self.terminal:
+        if self.terminal or self.currentFuel <= 0:
             return cpos
         if self.disable_movement_steps > 0:
             self.disable_movement_steps -= 1
@@ -141,3 +147,21 @@ class DiscreteAgent(Agent):
 
     def last_position(self):
         return self.last_pos
+    
+    def set_fuel(self, fuelAmount):
+        self.currentFuel = fuelAmount
+        
+    def fuel_deplete(self):
+        self.currentFuel -= 1
+        
+    def get_current_fuel(self):
+        return self.currentFuel
+    
+    def get_fuel_diff(self):
+        return self.fullFuel - self.currentFuel
+    
+    def make_fuel_full(self):
+        self.currentFuel = self.fullFuel
+        
+    def get_team_nr(self):
+        return self.team_nr

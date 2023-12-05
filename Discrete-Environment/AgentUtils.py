@@ -15,6 +15,8 @@ def create_agents(
     flatten=False,
     randinit=False,
     constraints=None,
+    competitive=False
+    
 ):
     """Initializes the agents on a map (map_matrix).
     -nagents: the number of agents to put on the map
@@ -38,10 +40,12 @@ def create_agents(
         ]       
     agents = []
     expanded_mat = np.zeros((xs + 2, ys + 2))
+    team_nr = 0
     for i in range(nagents):
+        if(i + 1 > nagents // 2 and competitive == True):
+            team_nr = 1
         xinit, yinit = (0, 0)
         if randinit:
-            print("rand")
             xinit, yinit = feasible_position_exp(
                 randomizer, map_matrix, expanded_mat, constraints=constraints
             )
@@ -52,17 +56,29 @@ def create_agents(
             expanded_mat[xinit + 1, yinit + 2] = -1
             expanded_mat[xinit + 1, yinit] = -1
         else:
-            print("not Rand", ys)
-            print(i + ((ys // 2) - (nagents // 2)))
-            yinit = i + ((ys // 2) - (nagents // 2))
+            if(competitive):
+                if(team_nr == 0):
+                    yinit = i
+                else:
+                    yinit = (ys - 1) - i
+            else:
+                yinit = i + ((ys // 2) - (nagents // 2))
+        
+        if(competitive):
+            agent = DiscreteAgent(
+                xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[team_nr], team_nr=team_nr
+            )
+        else:
+            agent = DiscreteAgent(
+                xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[i], team_nr=team_nr
+            )
             
-        agent = DiscreteAgent(
-            xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[i]
-        )
         if(xinit != 0):
             xinit = xinit / 2;
+            
         agent.set_position(xinit, yinit)
         agents.append(agent)
+        
     return agents
 
 

@@ -63,15 +63,31 @@ class Discrete:
             (0, 255, 255), # Cyan
         ] 
         self.currentCol = 0      
-        self.agents = AgentUtils.create_agents(
-            self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit=False
-        )
+      
         
-        self.availableCols = self.availableCols[:self.n_agents]
+        self.competitive = True
+        if self.competitive:
+            self.agents = AgentUtils.create_agents(
+                self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit=False, competitive=True
+            )
+        else:
+            self.agents = AgentUtils.create_agents(
+                self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit=False
+            )
+        
+        if(self.competitive):
+            self.availableCols = [
+            (255, 0, 0),   # Red
+            (0, 255, 0),   # Green
+            ]
+        else:
+            self.availableCols = self.availableCols[:self.n_agents]
         
         
+
         self.agent_layer = AgentLayer(self.x_size, self.y_size, self.agents)
-        
+
+       
         
         n_act_agent = self.agent_layer.get_nactions(0)
         
@@ -97,6 +113,7 @@ class Discrete:
         self.action_space = [act_space for _ in range(self.n_agents)]
         
         self.current_agent_layer = np.zeros((self.x_size, self.y_size), dtype=np.int32)
+
         
         #self.agent_controller = (
         #        RandomPolicy(n_act_agent, self.np_random)
@@ -118,9 +135,16 @@ class Discrete:
         
         self.tinted_sprites = {}
         
-        self.spawn_functions = [self.spawnWall, self.spawnObstacles]
         self.currentSpawnFunction = 0
         self.currentObstacleSpawnY = 0
+        
+        self.sparseReward = True
+        
+        
+        if(self.sparseReward):
+            self.spawn_functions = [self.spawnWall, self.spawnObstacles, self.spawnObstacles]
+        else:
+            self.spawn_functions = [self.spawnWall, self.spawnObstacles]
         
     def close(self):
         pygame.event.pump()
@@ -140,14 +164,14 @@ class Discrete:
         )
         constraints = [[xlb, xub], [ylb, yub]]
         
-        self.agents = AgentUtils.create_agents(
-            self.n_agents,
-            self.map_matrix,
-            self.obs_range,
-            self.np_random,
-            randinit=False,
-            constraints=constraints,
-        )
+        if self.competitive:
+            self.agents = AgentUtils.create_agents(
+                self.n_agents, self.map_matrix, self.obs_range, self.np_random, constraints=constraints, randinit=False, competitive=True
+            )
+        else:
+            self.agents = AgentUtils.create_agents(
+                self.n_agents, self.map_matrix, self.obs_range, self.np_random, constraints=constraints, randinit=False
+            )
         
         self.latest_reward_state = [0 for _ in range(self.n_agents)]
         self.latest_done_state = [False for _ in range(self.n_agents)]
@@ -197,14 +221,19 @@ class Discrete:
         return [seed_]
 
     def step(self, action, agent_id, islast):
+        print("agent_id", agent_id)
         agent_layer = self.agent_layer
         agent_layer.move_agent(agent_id, action)
         
+        
+        if(self.sparseReward):
+            for i in range(self.agent_layer.n_agents()):
+                agent_layer.allies[i].fuel_deplete()
 
         self.model_state[1] = self.agent_layer.get_state_matrix()
 
         self.moveWallsStep += 1
-        self.checkAsteroidCollision()
+        self.checkObstacleCollision()
 
         if self.moveWallsStep > 3:
             self.moveWallsStep = 0
@@ -214,8 +243,7 @@ class Discrete:
         
         self.latest_reward_state = self.reward() / self.n_agents
         self.checkWalls()
-        self.checkAsteroidCollision()
-
+        self.checkObstacleCollision()
 
         if self.spawnStep % 2 == 0:
             if self.wall_cooldown_counter <= 0:
@@ -223,6 +251,7 @@ class Discrete:
                     self.spawn_functions[self.currentSpawnFunction]()
                     self.currentSpawnFunction += 1
                     if(self.currentSpawnFunction >= len(self.spawn_functions)):
+                        print("Goto 0", self.currentSpawnFunction)
                         self.currentSpawnFunction = 0
                 else:
                     if self.np_random.random() < 0.5:
@@ -262,7 +291,8 @@ class Discrete:
             if 0 <= new_x < self.x_size:
                 fuel['position'] = (new_x, new_y)
                 new_fuel.append(fuel)
-        self.fuels = fuel
+        
+        self.fuels = new_fuel
 
         
         
@@ -281,28 +311,40 @@ class Discrete:
                 self.reset()
                 break
             
-    def checkAsteroidCollision(self):
+    def checkObstacleCollision(self):
         asteroids_to_remove = []
+        fuel_to_remove = []
 
         for i in range(self.agent_layer.n_agents()):
             agentX, agentY = self.agent_layer.get_position(i)
 
-            for asteroid in self.asteriods:
+            for fuel in list(self.fuels):
+                (fuelX, fuelY) = fuel['position']
+                if agentX == fuelX and agentY == fuelY:
+                    print("Fuel hit an agent!")
+                    self.agent_layer.allies[i].make_fuel_full()
+                    fuel_to_remove.append(fuel)
+
+            
+            for asteroid in list(self.asteriods):
                 (asteroidX, asteroidY) = asteroid['position']
 
                 if agentX == asteroidX and agentY == asteroidY:
                     print("Asteroid hit an agent!")
-                    # Add your logic to handle the collision, e.g., prevent agent movement for N steps
                     self.disableAgentMovement(i, 5)
                     asteroids_to_remove.append(asteroid)
 
-        # Remove asteroids that collided with agents
+        # Remove asteroids or fuel that collided with agents
         for asteroid in asteroids_to_remove:
-            self.asteriods.remove(asteroid)
+            if(self.asteriods.__contains__(asteroid)):
+                self.asteriods.remove(asteroid)
+        for fuel in fuel_to_remove:
+            if(self.fuels.__contains__(fuel)):
+                self.fuels.remove(fuel)
+
+        
 
     def disableAgentMovement(self, agent_id, steps):
-        # Add logic to disable agent movement for N steps
-        # For example, you can set a flag in the agent's instance to indicate that it should not move
         self.agent_layer.allies[agent_id].set_disable_movement(True)
         self.agent_layer.allies[agent_id].set_disable_movement_steps(steps)
                 
@@ -313,8 +355,12 @@ class Discrete:
         if(not self.randomSpawn):
             col = self.availableCols[self.currentCol]
             self.currentCol += 1
-            if(self.currentCol >= self.n_agents):
-                self.currentCol = 0
+            if(self.competitive):
+                if(self.currentCol >= 2):
+                    self.currentCol = 0
+            else:
+                if(self.currentCol >= self.n_agents):
+                    self.currentCol = 0
             print("random", self.currentCol)
         else:
             col = random.choice(self.availableCols)
@@ -335,7 +381,7 @@ class Discrete:
         
     def spawnFuel(self, y):
         x_len, y_len = self.model_state[0].shape
-        fuel_sprite = pygame.image.load(f"art/Asteroid{random.randint(1, 3)}.png")
+        fuel_sprite = pygame.image.load(f"art/Fuel.png")
         fuel_sprite = pygame.transform.scale(
             fuel_sprite, (int(self.pixel_scale), int(self.pixel_scale))
         )
@@ -364,8 +410,10 @@ class Discrete:
                 if(self.currentObstacleSpawnY >= self.y_size):
                     self.currentObstacleSpawnY = 0
                 if(self.currentSpawnFunction == 1):
+                    print("spawn A", self.currentSpawnFunction)
                     self.spawnAsteroid(y)
                 elif(self.currentSpawnFunction == 2):
+                    print("spawn fuel")
                     self.spawnFuel(y)
             else:
                 y = random.choice(list(available_y_positions))
@@ -390,18 +438,32 @@ class Discrete:
                     break
                 elif x > wall_x and wall_col != agent_col:
                     print("HIT WALL")
-                    rewards[i] = -10 
+                    rewards[i] = -20 
+                    for j in range(self.n_agents):
+                        teamnr = self.agent_layer.allies[i].get_team_nr()
+                        if i != j and teamnr == self.agent_layer.allies[j].get_team_nr():
+                            rewards[j] += -5
+                        elif i != j:
+                            rewards[j] += 20
                     break
 
             for asteroid in self.asteriods:
                 asteroid_x, asteroid_y = asteroid['position']
                 if x == asteroid_x and y == asteroid_y:
                     print("HIT ASTEROID")
-                    rewards[i] = -1 
+                    rewards[i] += -1 
                     break
 
-            if rewards[i] == 0:
+            if rewards[i] == 0 and not self.sparseReward:
                 rewards[i] = 0.01
+            elif self.sparseReward:
+                for fuel in self.fuels:
+                    fuel_x, fuel_y = fuel['position']
+                    if x == fuel_x and y == fuel_y:
+                        print("HIT FUEL")
+                        rewards[i] +=  0.1 * self.agent_layer.allies[i].get_fuel_diff()
+                        break
+                
         #print(rewards)
         return rewards
     
@@ -445,6 +507,17 @@ class Discrete:
             # Draw the rotated sprite on the screen
             rotated_rect = rotated_sprite.get_rect(center=center)
             self.screen.blit(rotated_sprite, rotated_rect.topleft)
+            
+             # Display fuel slider under the agent's sprite
+            if(self.sparseReward):
+                fuel_percentage = self.agent_layer.allies[i].get_current_fuel() / self.agent_layer.allies[i].fullFuel
+                fuel_slider_width = int(self.pixel_scale)
+                fuel_slider_height = 5
+                fuel_slider_pos = (center[0] - fuel_slider_width / 2, center[1] + self.pixel_scale / 2)
+                pygame.draw.rect(self.screen, (0, 255, 0), (fuel_slider_pos[0], fuel_slider_pos[1], fuel_slider_width * fuel_percentage, fuel_slider_height))
+
+                # Draw the border of the fuel slider
+                pygame.draw.rect(self.screen, (255, 255, 255), (fuel_slider_pos[0], fuel_slider_pos[1], fuel_slider_width, fuel_slider_height), 1)
 
     def calculate_rotation_angle(self, agent_idx):
         # Get the agent's last position from the DiscreteAgent instance
@@ -505,6 +578,19 @@ class Discrete:
             )
 
             self.screen.blit(asteroid_sprite, center)
+            
+    def draw_fuels(self):
+        for fuel in self.fuels:
+            (x, y) = fuel['position']
+            fuel_sprite = fuel['sprite']
+
+            # Calculate the position so that the center of the sprite is at (x, y)
+            center = (
+                int(self.pixel_scale * x + self.pixel_scale / 2 - fuel_sprite.get_width() / 2),
+                int(self.pixel_scale * y + self.pixel_scale / 2 - fuel_sprite.get_height() / 2),
+            )
+
+            self.screen.blit(fuel_sprite, center)
     
     def draw_grid(self):
         for x in range(self.x_size + 1):
@@ -521,7 +607,6 @@ class Discrete:
             )
         
     def render(self):
-        
         if self.screen is None:
             if self.render_mode == "human":
                 pygame.display.init()
@@ -542,6 +627,9 @@ class Discrete:
         self.draw_wall()
         self.draw_asteroids();
         #self.draw_grid();
+        if(self.sparseReward):
+            self.draw_fuels()
+        
         
         observation = pygame.surfarray.pixels3d(self.screen)
         new_observation = np.copy(observation)
@@ -609,6 +697,13 @@ class Discrete:
                     obs[2, asteroid_x , asteroid_y ] = 3
             elif xlo <= asteroid_x < xhi and ylo <= asteroid_y < yhi:
                     obs[2, asteroid_x - xlo, asteroid_y - ylo] = 3
+        
+        for fuel in self.fuels:
+            (fuel_x, fuel_y) = fuel['position']
+            if(self.fullyObservable):
+                    obs[2, fuel_x , fuel_y ] = 4
+            elif xlo <= fuel_x < xhi and ylo <= fuel_y < yhi:
+                    obs[2, fuel_x - xlo, fuel_y - ylo] = 4
             
         
     
