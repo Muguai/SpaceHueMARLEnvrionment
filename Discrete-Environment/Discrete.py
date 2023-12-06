@@ -518,6 +518,14 @@ class Discrete:
 
                 # Draw the border of the fuel slider
                 pygame.draw.rect(self.screen, (255, 255, 255), (fuel_slider_pos[0], fuel_slider_pos[1], fuel_slider_width, fuel_slider_height), 1)
+            
+            fire_sprite_path = f"FireFull{random.choice([1, 2, 3])}.png"
+            fire_sprite = pygame.image.load("art/"+ fire_sprite_path)
+            fire_sprite = pygame.transform.scale(fire_sprite, (int(self.pixel_scale), int(self.pixel_scale)))
+            fire_sprite_rect = fire_sprite.get_rect(center=center)
+            rotated_fire_sprite = pygame.transform.rotate(fire_sprite, rotation_angle)
+            if(self.agent_layer.allies[i].get_current_fuel() > 0 or self.agent_layer.allies[i].get_disable_movement() == True):
+                self.screen.blit(rotated_fire_sprite, fire_sprite_rect.topleft)
 
     def calculate_rotation_angle(self, agent_idx):
         # Get the agent's last position from the DiscreteAgent instance

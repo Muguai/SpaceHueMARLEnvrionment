@@ -83,6 +83,7 @@ class DiscreteAgent(Agent):
             return cpos
         if self.disable_movement_steps > 0:
             self.disable_movement_steps -= 1
+            self.disable_movement = True
             return cpos
         elif self.disable_movement == True:
             self.disable_movement = False
@@ -141,6 +142,9 @@ class DiscreteAgent(Agent):
         
     def set_disable_movement_steps(self, steps):
         self.disable_movement_steps = steps
+        
+    def get_disable_movement(self):
+        return self.disable_movement
 
     def current_position(self):
         return self.current_pos
