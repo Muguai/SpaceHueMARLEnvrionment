@@ -3,11 +3,6 @@ from gymnasium import spaces
 
 from pettingzoo.sisl._utils import Agent
 
-#################################################################
-# Implements the Single 2D Agent Dynamics
-#################################################################
-
-
 class DiscreteAgent(Agent):
     # constructor
     def __init__(
@@ -23,8 +18,6 @@ class DiscreteAgent(Agent):
         col=(0, 0, 0),
         team_nr=0
     ):
-        # map_matrix is the may of the environment (-1 are buildings)
-        # n channels is the number of observation channels
         self.color = col
 
         self.random_state = randomizer
@@ -64,7 +57,6 @@ class DiscreteAgent(Agent):
             self._obs_shape = (n_channels * obs_range**2 + 1,)
         else:
             self._obs_shape = (obs_range, obs_range, 4)
-            # self._obs_shape = (4, obs_range, obs_range)
 
     @property
     def observation_space(self):
@@ -78,7 +70,7 @@ class DiscreteAgent(Agent):
     def step(self, a):
         cpos = self.current_pos
         lpos = self.last_pos
-        # if dead or reached goal dont move
+        # if dead or out of fuel dont move
         if self.terminal or self.currentFuel <= 0:
             return cpos
         if self.disable_movement_steps > 0:
@@ -87,10 +79,7 @@ class DiscreteAgent(Agent):
             return cpos
         elif self.disable_movement == True:
             self.disable_movement = False
-        # if in building, dead, and stay there
-        if self.inbuilding(cpos[0], cpos[1]):
-            self.terminal = True
-            return cpos
+            
         tpos = self.temp_pos
         tpos[0] = cpos[0]
         tpos[1] = cpos[1]
@@ -102,9 +91,6 @@ class DiscreteAgent(Agent):
 
         # check bounds
         if not self.inbounds(x, y):
-            return cpos
-        # if bumped into building, then stay
-        if self.inbuilding(x, y):
             return cpos
         else:
             lpos[0] = cpos[0]
@@ -122,11 +108,6 @@ class DiscreteAgent(Agent):
     # Helper Functions
     def inbounds(self, x, y):
         if 0 <= x < self.xs and 0 <= y < self.ys:
-            return True
-        return False
-
-    def inbuilding(self, x, y):
-        if self.map_matrix[x, y] == -1:
             return True
         return False
 

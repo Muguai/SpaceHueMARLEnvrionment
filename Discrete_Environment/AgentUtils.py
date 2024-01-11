@@ -1,6 +1,6 @@
 import numpy as np
 
-from DiscreteAgent import DiscreteAgent
+from Discrete_Environment.DiscreteAgent import DiscreteAgent
 
 #################################################################
 # Implements utility functions for multi-agent DRL

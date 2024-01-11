@@ -1,3 +1,35 @@
-# MARL-Envrionment
+# Multi-Agent Reinforcement Learning (MARL) Environment
 
-A Flexible and Robust Benchmark Environment for Multi-agent Reinforcement Learning
+This project provides a flexible environment for Multi-Agent Reinforcement Learning (MARL). It allows you to customize various parameters to suit your specific needs.
+
+## Environment Parameters
+
+- `render_mode`: The mode for rendering the environment. Default is "human".
+- `x_size`: The width of the environment grid. Default is 32.
+- `y_size`: The height of the environment grid. Default is 16.
+- `max_cycles`: The maximum number of cycles the environment runs for. Default is 1000.
+- `randomSpawn`: Whether agents spawn at random locations and wheter obstacles spawn randomly or in a pre determined pattern. Default is True.
+- `sparseReward`: Sparse reward mode. if on agents wont gain a small reward each step and instead gain reward when they hit fuel obstacle. Default is False.
+- `fullyObservable`: Whether the environment is fully observable. Default is False.
+- `competitive`: Whether the environment is competitive. Default is False.
+- `moveTime`: The time it takes for an agent to move. Default is 3.
+- `spawnTime`: The time it takes for an agent to spawn. Default is 1.
+- `n_agents`: The number of agents in the environment. Default is 4.
+- `obs_range`: The range of observation for an agent. Default is 7.
+
+## How to Run
+
+1. Ensure you have Python 3.9 installed on your machine. You can download it from the official Python website.
+2. Clone this repository to your local machine.
+3. Navigate to the project directory in your terminal.
+4. Install the required dependencies using pip:
+
+```python
+pip install -r requirements.txt
+```
+
+5. Run the test script:
+
+```python
+python test.py
+```

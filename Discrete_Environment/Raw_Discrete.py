@@ -1,11 +1,8 @@
-from Discrete import Discrete as _env
+from Discrete_Environment.Discrete import Discrete as _env
 
 import numpy as np
 import pygame
 from gymnasium.utils import EzPickle
-
-import time
-
 
 from pettingzoo import AECEnv
 from pettingzoo.utils import agent_selector, wrappers
@@ -23,7 +20,7 @@ parallel_env = parallel_wrapper_fn(env)
 class raw_env(AECEnv, EzPickle):
     metadata = {
         "render_modes": ["human", "rgb_array"],
-        "name": "custom_env",
+        "name": "Space_hue",
         "is_parallelizable": True,
         "render_fps": 10,
         "has_manual_policy": True,
@@ -34,7 +31,7 @@ class raw_env(AECEnv, EzPickle):
         self.env = _env(*args, **kwargs)
         self.render_mode = "human"
         pygame.init()
-        self.agents = ["pursuer_" + str(a) for a in range(self.env.n_agents)]
+        self.agents = ["agent_" + str(a) for a in range(self.env.n_agents)]
         self.possible_agents = self.agents[:]
         self.agent_name_mapping = dict(zip(self.agents, list(range(self.num_agents))))
         self._agent_selector = agent_selector(self.agents)
@@ -113,8 +110,3 @@ class raw_env(AECEnv, EzPickle):
     def action_space(self, agent: str):
         return self.action_spaces[agent]
     
-
-
-from pettingzoo.test import api_test
-env = env()
-api_test(env, num_cycles=1000)
