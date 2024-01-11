@@ -1,6 +1,6 @@
-# Multi-Agent Reinforcement Learning (MARL) Environment
+# Space Hue MARL Environment
 
-This project provides a flexible environment for Multi-Agent Reinforcement Learning (MARL). It allows you to customize various parameters to suit your specific needs.
+This project provides a flexible environment for Multi-Agent Reinforcement Learning (MARL) called Space Hue. It allows you to customize various parameters to suit your specific needs.
 
 ## Environment Parameters
 
