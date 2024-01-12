@@ -16,8 +16,10 @@ class DiscreteAgent(Agent):
         seed=1,
         flatten=False,
         col=(0, 0, 0),
-        team_nr=0
+        team_nr=0,
+        all_agents=None 
     ):
+        self.all_agents = all_agents  
         self.color = col
 
         self.random_state = randomizer
@@ -92,6 +94,11 @@ class DiscreteAgent(Agent):
         # check bounds
         if not self.inbounds(x, y):
             return cpos
+        
+        # check if the position is occupied by another agent
+        for agent in self.all_agents:
+            if np.array_equal(agent.current_position(), tpos):
+                return cpos  
         else:
             lpos[0] = cpos[0]
             lpos[1] = cpos[1]

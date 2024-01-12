@@ -1,6 +1,6 @@
 from Discrete_Environment.Raw_Discrete import env
 
-#more tests available at https://pettingzoo.farama.org/content/environment_tests/
+# more tests available at https://pettingzoo.farama.org/content/environment_tests/
 from pettingzoo.test import api_test
 
 env = env(
@@ -17,4 +17,5 @@ env = env(
     n_agents=4,
     obs_range=7
 )
+
 api_test(env, num_cycles=1000)

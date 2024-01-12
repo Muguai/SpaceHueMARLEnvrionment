@@ -66,30 +66,27 @@ class raw_env(AECEnv, EzPickle):
             return self.env.render()
 
     def step(self, action):
-        if (
-            self.terminations[self.agent_selection]
-            or self.truncations[self.agent_selection]
-        ):
-            self._was_dead_step(action)
-            return
         agent = self.agent_selection
         self.env.step(
             action, self.agent_name_mapping[agent], self._agent_selector.is_last()
         )
-        for k in self.terminations:
-            if self.env.frames >= self.env.max_cycles:
-                self.truncations[k] = True
+        
+        
         for k in self.agents:
             self.rewards[k] = self.env.latest_reward_state[self.agent_name_mapping[k]]
         
         #print("---- Rewards ----")
         #print(self.rewards)
+    
             
         self.steps += 1
 
         self._cumulative_rewards[self.agent_selection] = 0
         self.agent_selection = self._agent_selector.next()
         self._accumulate_rewards()
+        
+        
+
         
         #print("---- Accumalate Rewards ----")
         #print(self._cumulative_rewards)

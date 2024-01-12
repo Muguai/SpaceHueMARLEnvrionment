@@ -36,7 +36,6 @@ class Discrete:
         self.obs_offset = int((self.obs_range - 1) / 2)
         
         
-        
         self.availableCols = [
             (255, 0, 0),   # Red
             (0, 255, 0),   # Green
@@ -58,9 +57,10 @@ class Discrete:
             )
         else:
             self.agents = AgentUtils.create_agents(
-                self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit= self.randomSpawn 
+                self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit= self.randomSpawn
             )
-        
+        for agent in self.agents:
+            agent.all_agents = self.agents
         if(self.competitive):
             self.availableCols = [
             (255, 0, 0),   # Red
@@ -156,6 +156,8 @@ class Discrete:
             self.agents = AgentUtils.create_agents(
                 self.n_agents, self.map_matrix, self.obs_range, self.np_random, constraints=constraints, randinit=self.randomSpawn 
             )
+        for agent in self.agents:
+            agent.all_agents = self.agents
         
         self.latest_reward_state = [0 for _ in range(self.n_agents)]
         self.latest_done_state = [False for _ in range(self.n_agents)]
