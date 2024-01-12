@@ -14,6 +14,8 @@ This project provides a flexible environment for Multi-Agent Reinforcement Learn
 - `competitive`: Whether the environment is competitive. Default is False.
 - `moveTime`: The time it takes for an agent to move. Default is 3.
 - `spawnTime`: The time it takes for an agent to spawn. Default is 1.
+- `num_obstacles`: The number of obstacles created at a time in the environment.
+- `obstacle_probability`: The probability of an obstacle or wall being spawned in the environment. The value is clamped between 0 and 1, meaning it can't be less than 0 or more than 1. Only affects env if `randomSpawn` is True
 - `n_agents`: The number of agents in the environment. Default is 4.
 - `obs_range`: The range of observation for an agent. Default is 7.
 

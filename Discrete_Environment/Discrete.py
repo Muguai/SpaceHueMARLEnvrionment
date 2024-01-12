@@ -13,7 +13,7 @@ import math
 
 class Discrete:
 
-    def __init__(self, render_mode="human", x_size=32, y_size=16, max_cycles=1000, randomSpawn=True, sparseReward=False, fullyObservable=False, competitive=False, moveTime=3, spawnTime=1, n_agents=4, obs_range=7):
+    def __init__(self, render_mode="human", x_size=32, y_size=16, max_cycles=1000, randomSpawn=True, sparseReward=False, fullyObservable=False, competitive=False, moveTime=3, spawnTime=1, num_obstacles=2, obstacle_probability=0.5,n_agents=4, obs_range=7):
         #options
         self.render_mode = render_mode
         self.x_size = x_size
@@ -26,8 +26,11 @@ class Discrete:
         self.competitive = competitive
         self.moveTime = moveTime
         self.spawnTime = spawnTime
+        self.num_obstacles = num_obstacles
+        self.obstacle_probability = np.clip(obstacle_probability, 0, 1)
         self.n_agents = n_agents
         self.obs_range = obs_range
+
 
         self._seed()
         
@@ -238,7 +241,7 @@ class Discrete:
                     if(self.currentSpawnFunction >= len(self.spawn_functions)):
                         self.currentSpawnFunction = 0
                 else:
-                    if self.np_random.random() < 0.5:
+                    if self.np_random.random() < self.obstacle_probability:
                         self.spawnWall()
                     else:
                         self.spawnObstacles() 
@@ -372,7 +375,7 @@ class Discrete:
         })
     
     def spawnObstacles(self):
-        numberOfSpawns = self.n_agents // 2
+        numberOfSpawns = self.num_obstacles
         new_asteroids = []
 
         for _ in range(numberOfSpawns):

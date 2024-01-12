@@ -14,6 +14,8 @@ env = env(
     competitive=False,
     moveTime=3,
     spawnTime=1,
+    obstacle_probability=0.5,
+    num_obstacles=2,
     n_agents=4,
     obs_range=7
 )
