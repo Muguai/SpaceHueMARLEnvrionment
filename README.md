@@ -8,6 +8,9 @@ This project provides a flexible environment for Multi-Agent Reinforcement Learn
 - `x_size`: The width of the environment grid. Default is 32.
 - `y_size`: The height of the environment grid. Default is 16.
 - `max_cycles`: The maximum number of cycles the environment runs for. Default is 1000.
+- `randomActions`: Whether agents has a chance to do a random action other then the one chosen
+- `randomActionsProbability`: The probability of a random action occuring if randomActions is enabled
+- `randomSpawn`: Whether agents spawn at random locations and wheter obstacles spawn randomly or in a pre determined pattern. Default is True.
 - `randomSpawn`: Whether agents spawn at random locations and wheter obstacles spawn randomly or in a pre determined pattern. Default is True.
 - `sparseReward`: Sparse reward mode. if on agents wont gain a small reward each step and instead gain reward when they hit fuel obstacle. Default is False.
 - `fullyObservable`: Whether the environment is fully observable. Default is False.
