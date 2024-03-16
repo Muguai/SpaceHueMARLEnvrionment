@@ -15,7 +15,9 @@ def create_agents(
     flatten=False,
     randinit=False,
     constraints=None,
-    competitive=False
+    competitive=False,
+    randomActions=False,
+    randomProbabilities=0.2,
     
 ):
     """Initializes the agents on a map (map_matrix).
@@ -41,6 +43,7 @@ def create_agents(
     agents = []
     expanded_mat = np.zeros((xs + 2, ys + 2))
     team_nr = 0
+    
     for i in range(nagents):
         if(i + 1 > nagents // 2 and competitive == True):
             team_nr = 1
@@ -66,11 +69,11 @@ def create_agents(
         
         if(competitive):
             agent = DiscreteAgent(
-                xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[team_nr], team_nr=team_nr
+                xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[team_nr], team_nr=team_nr, randomActions=randomActions, randomProbabilities=randomProbabilities
             )
         else:
             agent = DiscreteAgent(
-                xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[i], team_nr=team_nr
+                xs, ys, map_matrix, randomizer, obs_range=obs_range, flatten=flatten, col=availableCols[i], team_nr=team_nr, randomActions=randomActions, randomProbabilities=randomProbabilities
             )
             
         if(xinit != 0):

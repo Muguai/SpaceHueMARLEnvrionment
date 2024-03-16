@@ -17,12 +17,16 @@ class DiscreteAgent(Agent):
         flatten=False,
         col=(0, 0, 0),
         team_nr=0,
-        all_agents=None 
+        all_agents=None, 
+        randomActions=False,
+        randomProbabilities=0.2
     ):
         self.all_agents = all_agents  
         self.color = col
 
         self.random_state = randomizer
+        self.randomActions = randomActions
+        self.randomProbabilities = randomProbabilities
         
         self.disable_movement = False
         self.disable_movement_steps = 0
@@ -70,6 +74,10 @@ class DiscreteAgent(Agent):
 
     # Dynamics Functions
     def step(self, a):
+        if self.randomActions:
+            probabilities = [1/len(self.eactions)] * len(self.eactions)
+            a = np.random.choice(self.eactions, p=probabilities)
+
         cpos = self.current_pos
         lpos = self.last_pos
         # if dead or out of fuel dont move

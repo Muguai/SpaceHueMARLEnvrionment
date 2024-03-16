@@ -13,7 +13,7 @@ import math
 
 class Discrete:
 
-    def __init__(self, render_mode="human", x_size=32, y_size=16, max_cycles=1000, randomSpawn=True, sparseReward=False, fullyObservable=False, competitive=False, moveTime=3, spawnTime=1, num_obstacles=2, obstacle_probability=0.5,n_agents=4, obs_range=7):
+    def __init__(self, render_mode="human", x_size=32, y_size=16, max_cycles=1000, randomSpawn=True, sparseReward=False, fullyObservable=False, competitive=False, moveTime=3, spawnTime=1, num_obstacles=2, obstacle_probability=0.5,n_agents=4, obs_range=7, randomActions=True, randomActionsProbability=0.2):
         #options
         self.render_mode = render_mode
         self.x_size = x_size
@@ -30,6 +30,9 @@ class Discrete:
         self.obstacle_probability = np.clip(obstacle_probability, 0, 1)
         self.n_agents = n_agents
         self.obs_range = obs_range
+        self.randomActions = randomActions
+        self.randomActionsProbability = randomActionsProbability
+
 
 
         self._seed()
@@ -54,14 +57,10 @@ class Discrete:
         self.currentCol = 0      
       
         
-        if self.competitive:
-            self.agents = AgentUtils.create_agents(
-                self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit= self.randomSpawn , competitive=True
-            )
-        else:
-            self.agents = AgentUtils.create_agents(
-                self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit= self.randomSpawn
-            )
+        self.agents = AgentUtils.create_agents(
+            self.n_agents, self.map_matrix, self.obs_range, self.np_random, randinit= self.randomSpawn , competitive=self.competitive, randomActions=randomActions, randomProbabilities=randomActionsProbability
+        )
+    
         for agent in self.agents:
             agent.all_agents = self.agents
         if(self.competitive):
@@ -151,14 +150,10 @@ class Discrete:
         )
         constraints = [[xlb, xub], [ylb, yub]]
         
-        if self.competitive:
-            self.agents = AgentUtils.create_agents(
-                self.n_agents, self.map_matrix, self.obs_range, self.np_random, constraints=constraints, randinit=self.randomSpawn , competitive=True
-            )
-        else:
-            self.agents = AgentUtils.create_agents(
-                self.n_agents, self.map_matrix, self.obs_range, self.np_random, constraints=constraints, randinit=self.randomSpawn 
-            )
+        self.agents = AgentUtils.create_agents(
+            self.n_agents, self.map_matrix, self.obs_range, self.np_random, constraints=constraints, randinit=self.randomSpawn , competitive=self.competitive, randomActions=self.randomActions, randomProbabilities=self.randomActionsProbability
+        )
+        
         for agent in self.agents:
             agent.all_agents = self.agents
         

@@ -96,7 +96,7 @@ class raw_env(AECEnv, EzPickle):
 
     def observe(self, agent):
         o = self.env.safely_observe(self.agent_name_mapping[agent])
-        #print("Observe ", agent , " shape: ", o.shape)
+        #print("---- Observe", agent, "----")
         #print(o)
         o = np.transpose(o, (1, 2, 0))        
         return o
